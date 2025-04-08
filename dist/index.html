@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>테트리스 멀티플레이어</title>
+  <script type="module" crossorigin src="/tetris-multiplayer/assets/index-D8jg2FMn.js"></script>
+  <link rel="stylesheet" crossorigin href="/tetris-multiplayer/assets/index-BS4dU53G.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <!-- 헤더 -->
+    <header class="mb-8 text-center">
+      <h1 class="text-4xl font-bold text-blue-400 mb-2">테트리스 멀티플레이어</h1>
+      <div class="flex flex-wrap justify-center gap-2 mb-4">
+        <div id="user-id" class="bg-gray-800 px-3 py-1 rounded">내 ID: <span id="peer-id-display">연결 중...</span></div>
+        <div id="network-status" class="bg-gray-800 px-3 py-1 rounded">상태: <span id="connection-status">연결 대기 중</span></div>
+        <div id="opponent-info" class="bg-gray-800 px-3 py-1 rounded hidden">상대: <span id="opponent-id-display"></span></div>
+      </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- 왼쪽 영역 (내 게임) -->
+      <div class="lg:col-span-1">
+        <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
+          <h2 class="text-xl font-bold mb-2 text-center">내 게임</h2>
+          <div class="flex justify-center mb-4">
+            <div id="my-score" class="bg-gray-700 px-3 py-1 rounded">점수: <span id="score-display">0</span></div>
+          </div>
+          <div class="flex justify-center mb-4">
+            <div id="my-game-container" class="relative">
+              <div id="my-game-board" class="game-board w-[250px] h-[500px] grid-cols-10 grid-rows-20"></div>
+              <div id="game-over-overlay" class="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center hidden">
+                <div class="text-2xl font-bold mb-4">게임 오버</div>
+                <button id="restart-button" class="btn btn-primary">다시 시작</button>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-center">
+            <div>
+              <h3 class="text-lg font-semibold mb-2 text-center">다음 블록</h3>
+              <div id="next-piece-preview" class="preview-grid w-24 h-24 mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 중앙 영역 (연결 및 컨트롤) -->
+      <div class="lg:col-span-1">
+        <div class="bg-gray-800 rounded-lg p-4 shadow-lg mb-6">
+          <h2 class="text-xl font-bold mb-4 text-center">네트워크 연결</h2>
+          <div class="mb-4">
+            <h3 class="font-semibold mb-2">수동 연결</h3>
+            <div class="flex gap-2">
+              <input type="text" id="connect-to-id" placeholder="상대방 ID 입력" 
+                class="flex-1 px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <button id="connect-button" class="btn btn-primary">연결</button>
+            </div>
+          </div>
+          <div class="mb-0">
+            <h3 class="font-semibold mb-2">로컬 네트워크 유저</h3>
+            <div id="discovery-status" class="text-sm text-gray-400 mb-2">검색 중...</div>
+            <div id="available-peers" class="max-h-40 overflow-y-auto">
+              <div class="text-gray-500 text-sm">가능한 사용자가 나타납니다...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 게임 컨트롤 (데스크톱) -->
+        <div class="hidden md:block">
+          <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
+            <h2 class="text-xl font-bold mb-4 text-center">컨트롤</h2>
+            <div class="grid grid-cols-3 gap-2 text-center text-sm">
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">왼쪽 이동</div>
+                <div class="text-gray-400">← / A</div>
+              </div>
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">오른쪽 이동</div>
+                <div class="text-gray-400">→ / D</div>
+              </div>
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">회전</div>
+                <div class="text-gray-400">↑ / W</div>
+              </div>
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">소프트 드롭</div>
+                <div class="text-gray-400">↓ / S</div>
+              </div>
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">하드 드롭</div>
+                <div class="text-gray-400">스페이스바</div>
+              </div>
+              <div class="bg-gray-700 p-2 rounded">
+                <div class="font-bold">일시정지</div>
+                <div class="text-gray-400">P / ESC</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오른쪽 영역 (상대방 게임) -->
+      <div class="lg:col-span-1">
+        <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
+          <h2 class="text-xl font-bold mb-2 text-center">상대방 게임</h2>
+          <div class="flex justify-center mb-4">
+            <div id="opponent-score" class="bg-gray-700 px-3 py-1 rounded">점수: <span id="opponent-score-display">0</span></div>
+          </div>
+          <div class="flex justify-center mb-4">
+            <div id="opponent-game-container" class="relative">
+              <div id="opponent-game-board" class="game-board w-[250px] h-[500px] grid-cols-10 grid-rows-20 opacity-80"></div>
+              <div id="waiting-overlay" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+                <div class="text-center">
+                  <div class="text-lg font-semibold mb-2">상대방 대기 중</div>
+                  <div class="text-sm text-gray-400">누군가 연결되면 여기에 표시됩니다.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-center">
+            <div>
+              <h3 class="text-lg font-semibold mb-2 text-center">다음 블록</h3>
+              <div id="opponent-next-piece" class="preview-grid w-24 h-24 mx-auto opacity-80"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 모바일 전용 컨트롤 -->
+    <div id="mobile-controls" class="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-90">
+      <div class="flex justify-between items-center max-w-md mx-auto">
+        <button id="move-left" class="control-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div class="flex flex-col gap-4">
+          <button id="rotate" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <button id="hard-drop" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        </div>
+        <button id="move-right" class="control-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 스크립트 -->
+</body>
+</html> 
