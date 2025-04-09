@@ -6,6 +6,7 @@
 
 - 기본 테트리스 게임 플레이 (7가지 테트로미노, 회전, 이동, 하드/소프트 드롭)
 - PeerJS를 이용한 P2P 실시간 멀티플레이
+- Google의 공개 STUN 서버를 사용한 NAT 통과 지원
 - 로컬 네트워크 내 다른 플레이어 자동 검색
 - 모바일 지원 반응형 UI
 - 상대방 게임 화면과 점수 실시간 표시
@@ -62,6 +63,7 @@ npm run start
 - JavaScript (ES6+)
 - Tailwind CSS
 - PeerJS (WebRTC)
+- Google STUN 서버
 - Vite (빌드 도구)
 
 ## 프로젝트 구조
