@@ -659,17 +659,33 @@ class NetworkManager {
   initPeer() {
     // PeerJS 인스턴스 생성
     this.peer = new Peer(this.peerId, {
-      debug: 2,
+      debug: 3,
       config: {
         'iceServers': [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' },
           { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' }
+          { urls: 'stun:stun4.l.google.com:19302' },
+          { urls: 'stun:stun.stunprotocol.org:3478' },
+          { urls: 'stun:stun.voiparound.com' },
+          { urls: 'stun:stun.voipbuster.com' },
+          {
+            urls: 'turn:numb.viagenie.ca',
+            credential: 'muazkh',
+            username: 'webrtc@live.com'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
         ]
       }
     });
+    
+    // 연결 상태 디버깅 로그
+    console.log('PeerJS 초기화 중, 버전:', Peer.version);
     
     // 연결 성공 이벤트
     this.peer.on('open', (id) => {
@@ -699,10 +715,25 @@ class NetworkManager {
       console.log('연결 요청을 받았습니다:', this.opponentId);
     });
     
+    // 연결 해제 이벤트
+    this.peer.on('disconnected', () => {
+      console.log('PeerJS 서버와 연결이 끊어졌습니다. 재연결 시도 중...');
+      document.getElementById('connection-status').textContent = '재연결 중...';
+      this.peer.reconnect();
+    });
+    
     // 에러 이벤트
     this.peer.on('error', (err) => {
       console.error('PeerJS 에러:', err);
       document.getElementById('connection-status').textContent = '연결 오류';
+      console.error('에러 타입:', err.type);
+      
+      if (err.type === 'peer-unavailable') {
+        alert('상대방을 찾을 수 없습니다. ID를 확인해주세요.');
+      } else if (err.type === 'network' || err.type === 'disconnected') {
+        console.log('네트워크 문제 발생. 재연결 시도 중...');
+        setTimeout(() => this.peer.reconnect(), 3000);
+      }
     });
   }
 
@@ -710,7 +741,10 @@ class NetworkManager {
    * 연결 이벤트 핸들러 설정
    */
   setupConnectionHandlers() {
+    console.log('연결 설정 중:', this.opponentId);
+    
     this.connection.on('open', () => {
+      console.log('연결이 성공적으로 열렸습니다:', this.opponentId);
       this.isConnected = true;
       document.getElementById('connection-status').textContent = '연결됨';
       document.getElementById('opponent-id-display').textContent = this.opponentId;
@@ -726,6 +760,7 @@ class NetworkManager {
     });
     
     this.connection.on('close', () => {
+      console.log('연결이 닫혔습니다:', this.opponentId);
       this.handleDisconnect();
     });
     
@@ -733,6 +768,23 @@ class NetworkManager {
       console.error('연결 에러:', err);
       this.handleDisconnect();
     });
+    
+    // 5초 이내에 연결이 열리지 않으면 타임아웃으로 간주
+    this.connectionTimeout = setTimeout(() => {
+      if (!this.isConnected && this.connection) {
+        console.log('연결 타임아웃. 연결 시도를 중단합니다.');
+        this.connection.close();
+        this.connection = null;
+        this.opponentId = null;
+        document.getElementById('connection-status').textContent = '연결 실패 (타임아웃)';
+        
+        // 5초 후 다시 대기 상태로
+        setTimeout(() => {
+          document.getElementById('connection-status').textContent = '연결 대기 중';
+          this.broadcastPresence();
+        }, 5000);
+      }
+    }, 15000);
   }
 
   /**
@@ -740,11 +792,20 @@ class NetworkManager {
    */
   connectToPeer(peerId) {
     if (this.connection || peerId === this.peerId) {
+      console.log('이미 연결 중이거나 자신에게 연결 시도:', peerId);
       return false;
     }
     
     try {
-      this.connection = this.peer.connect(peerId);
+      console.log('연결 시도 중:', peerId);
+      
+      // 연결 옵션 설정
+      const options = {
+        reliable: true,
+        serialization: 'json'
+      };
+      
+      this.connection = this.peer.connect(peerId, options);
       this.opponentId = peerId;
       this.isHost = false;
       
@@ -765,6 +826,12 @@ class NetworkManager {
    * 연결 종료 처리
    */
   handleDisconnect() {
+    // 타임아웃 제거
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
     this.isConnected = false;
     this.connection = null;
     this.opponentId = null;

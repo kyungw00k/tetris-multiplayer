@@ -48,19 +48,24 @@ class PeerDiscovery {
     
     if (!this.myPeerId) {
       console.warn('피어 ID가 설정되지 않았습니다. tetris.js가 먼저 로드되어야 합니다.');
+      
+      // tetris.js가 로드될 때까지 잠시 대기
+      setTimeout(() => this.initDiscovery(), 1000);
       return;
     }
+    
+    console.log('피어 발견 서비스 초기화. 내 ID:', this.myPeerId);
+    
+    // 즉시 하트비트 브로드캐스트
+    this.broadcastHeartbeat();
     
     // 주기적으로 피어 목록 업데이트
     this.discoveryInterval = setInterval(() => {
       this.updateAvailablePeers();
       this.updateDiscoveryStatus();
       
-      // 주기적으로 하트비트 브로드캐스트
-      if (this.heartbeatCounter % 5 === 0) {
-        this.broadcastHeartbeat();
-      }
-      
+      // 주기적으로 하트비트 브로드캐스트 (2초마다)
+      this.broadcastHeartbeat();
       this.heartbeatCounter++;
     }, 2000);
   }
