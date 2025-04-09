@@ -659,7 +659,16 @@ class NetworkManager {
   initPeer() {
     // PeerJS 인스턴스 생성
     this.peer = new Peer(this.peerId, {
-      debug: 2
+      debug: 2,
+      config: {
+        'iceServers': [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' }
+        ]
+      }
     });
     
     // 연결 성공 이벤트
